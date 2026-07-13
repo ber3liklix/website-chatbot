@@ -1,7 +1,4 @@
-/* =========================================================
-   BİLGİ TABANI (hit30.sanayi.gov.tr ve yatirimadestek.gov.tr
-   içeriklerinden derlenmiştir)
-   ========================================================= */
+
 const KB = {
   program: `HIT-30, yüksek öncelikli teknoloji alanlarında gerçekleştirilecek özel nitelikli yatırım projelerine kapsamlı destek ve teşvik sağlayan bir yatırım programıdır. 🎯<br><br>
   Amaç; Türkiye'nin sanayi altyapısı, nitelikli genç nüfusu ve stratejik konumu gibi avantajlarını kullanarak, yüksek teknoloji yatırımlarında dünya çapında öne çıkan merkezlerden biri haline gelmektir.<br><br>
@@ -68,7 +65,7 @@ const KB = {
   Portal üzerinden Teşvik Robotu'nu deneyerek işletmenize uygun destekleri de sorgulayabilirsiniz.`
 };
 
-/* Ana menü baloncukları — her cevaptan sonra tekrar gösterilir */
+
 const MAIN_MENU = [
   { label: "💡 Program Hakkında", key: "program" },
   { label: "🏭 Sektörler", key: "sektorler" },
@@ -87,7 +84,7 @@ const SSS_MENU = [
   { label: "İl bazlı fark var mı?", key: "sss_il" }
 ];
 
-/* Arama / eşleştirme için anahtar kelime tablosu */
+
 const SEARCH_INDEX = [
   { key: "program", words: ["hit30 nedir","hit-30 nedir","program nedir","nedir bu program","genel bilgi","hakkinda bilgi","ne yapiyor","amaci ne","bu ne"] },
   { key: "sektorler", words: ["sektor","sektorler","alan","yatirim alani","yari iletken","cip","mobilite","yesil enerji","ileri imalat","saglikli yasam","dijital teknoloji","haberlesme","uzay","hangi alanlarda"] },
@@ -104,7 +101,7 @@ const SEARCH_INDEX = [
   { key: "iletisim", words: ["iletisim","mail","e-posta","telefon","ulasmak","kiminle gorusurum","destek ofisi","email"] }
 ];
 
-/* Türkçe karakter normalizasyonu */
+
 function normalize(str){
   return str.toLowerCase()
     .replace(/ı/g,'i').replace(/i̇/g,'i')
@@ -119,16 +116,14 @@ function searchKB(query){
   SEARCH_INDEX.forEach(entry=>{
     let score = 0;
     entry.words.forEach(w=>{
-      if(q.includes(w)) score += w.split(' ').length; // çok kelimeli eşleşmeye öncelik
+      if(q.includes(w)) score += w.split(' ').length; 
     });
     if(score > bestScore){ bestScore = score; best = entry.key; }
   });
   return bestScore > 0 ? best : null;
 }
 
-/* =========================================================
-   ARAYÜZ MANTIĞI
-   ========================================================= */
+
 const chatBody = document.getElementById('chatBody');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -231,18 +226,41 @@ function handleMenuClick(item){
   botReply(KB[item.key]);
 }
 
-function handleFreeText(text){
+let conversationHistory = [];
+
+async function handleFreeText(text){
   clearOldChips();
   addUserMessage(text);
-  const matchKey = searchKB(text);
+  showTyping();
 
-  if(matchKey){
-    botReply(KB[matchKey]);
-  } else {
-    botReply(`Bu konuda net bir bilgi bulamadım 🙏 Size en doğru bilgiyi verebilmesi için doğrudan HIT-30 Destek Ofisi ile iletişime geçmenizi öneririm:<br><br>
-    📧 <b>hit30@sanayi.gov.tr</b><br>
-    🌐 <a href="https://www.yatirimadestek.gov.tr" target="_blank">yatirimadestek.gov.tr</a> üzerinden Teşvik Robotu'nu da deneyebilirsiniz.<br><br>
-    Aşağıdan başka bir konu seçebilirsiniz 👇`, 1200);
+  try{
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        history: conversationHistory
+      })
+    });
+
+    const data = await res.json();
+    removeTyping();
+
+    const reply = data.reply || "Üzgünüm, bir sorun oluştu. 🙏";
+    addBotMessageInstant(reply);
+
+    conversationHistory.push({ role: 'user', content: text });
+    conversationHistory.push({ role: 'assistant', content: reply });
+
+    if(conversationHistory.length > 10){
+      conversationHistory = conversationHistory.slice(-10);
+    }
+
+    setTimeout(showMainMenu, 350);
+  } catch(err){
+    removeTyping();
+    addBotMessageInstant("Bağlantı hatası oluştu. 🙏 Lütfen tekrar deneyin.");
+    setTimeout(showMainMenu, 350);
   }
 }
 
@@ -260,9 +278,7 @@ userInput.addEventListener('keydown', (e)=>{
   }
 });
 
-/* =========================================================
-   AÇILIŞ MESAJI
-   ========================================================= */
+
 window.addEventListener('DOMContentLoaded', ()=>{
   showTyping();
   setTimeout(()=>{
