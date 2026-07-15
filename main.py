@@ -160,7 +160,7 @@ def chat():
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
-            max_tokens=1000,
+            max_tokens=2000,
             messages=messages
         )
         reply_text = response.choices[0].message.content
